@@ -3,6 +3,7 @@ import re
 from collections import defaultdict
 from pprint import pprint
 import csv
+import traceback
 
 
 def get_current_table(line: str) -> str:
@@ -25,7 +26,11 @@ def get_tables_from_key_from(line: str) -> str:
 
 def get_tables_from_key_join(line: str) -> str:
     """Получить все таблицы из раздела join"""
-    line = line.split('join ')[1].split(' on ')[0]
+    try:
+        line = line.split('join')[1].split(' on ')[0]
+    except Exception as e:
+        print(traceback.format_exc())
+        print(str(e))
 
     return get_current_table(line)
 
@@ -37,13 +42,14 @@ def get_name_tables(line: str) -> str:
     return get_current_table(line)
 
 
+# TODO: считывание данных не из одного файла, а из папки, где много сразу файлов
 def get_hashmap_dependent_tables(code_package_bodies) -> dict:
     """Получение хэш-таблицы с зависимостями таблиц из всех пакетов"""
     hash_tables = defaultdict(set)
 
     with open(code_package_bodies, 'r', encoding='UTF-8') as f:
         for line in f:
-            line = line.lower().strip(' \n')
+            line = line.lower().strip(' \n ')
             if line.startswith('--'):
                 continue
             elif re.search(r"merge into|insert into", line):
@@ -53,7 +59,7 @@ def get_hashmap_dependent_tables(code_package_bodies) -> dict:
             elif re.search(r'join', line):
                 hash_tables[table].add(get_tables_from_key_join(line))
 
-    pprint(hash_tables)
+    # pprint(hash_tables)
 
     return hash_tables
 
@@ -84,7 +90,7 @@ def get_list_depedent(hash_tables: dict) -> list:
                 }
             )
 
-    pprint(list_depedent_for_csv)
+    # pprint(list_depedent_for_csv)
     return list_depedent_for_csv
 
 
@@ -100,7 +106,7 @@ def create_csv_file(name_file: str, list_depedents_for_csv: list) -> None:
 def main():
     hash_tables = get_hashmap_dependent_tables(code_package_bodies)
     list_depedent_for_csv = get_list_depedent(hash_tables)
-    create_csv_file('table_dep1', list_depedent_for_csv)
+    create_csv_file('results2', list_depedent_for_csv)
 
 
 if __name__ == "__main__":
