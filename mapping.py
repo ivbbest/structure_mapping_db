@@ -4,25 +4,41 @@ from collections import defaultdict
 import csv
 
 
+# TODO: создать custom exception class и использовать для обработки ошибок, чтобы было DRY
 def get_current_table(line: str) -> str:
     """Проверка наличия алиаса рядом с таблицей и возврат только самой таблицы"""
-    line = line if line.find(' ') == -1 else line.split()[0]
+    try:
+        line = line if line.find(' ') == -1 else line.split()[0]
 
-    if line in all_table_name or (line.find('.') != -1 and line.find('_') != -1):
-        return line.strip('()')
+        if line in all_table_name or (line.find('.') != -1 and line.find('_') != -1):
+            return line.strip('()')
+    except IndexError as e:
+        print("Проблема с разделителем строки из раздела from или join. Он не найден или список пуст.")
+    except Exception as e:
+        print("Какая-то ошибка с delimetr из раздела from или join")
 
 
 def get_table_from_section_from_or_join(line: str) -> str:
     """Получить таблицу из раздела from или join"""
-    line = re.split(r'from|join', line)[1]
-    line = re.split(r'\swhere\s|\son\s', line)[0].strip()
+    try:
+        line = re.split(r'from|join', line)[1]
+        line = re.split(r'\swhere\s|\son\s', line)[0].strip()
+    except IndexError as e:
+        print("Проблема с разделителем строки из раздела from или join. Он не найден или список пуст.")
+    except Exception as e:
+        print("Какая-то ошибка с delimetr из раздела from или join")
 
     return get_current_table(line)
 
 
 def get_name_tables(line: str) -> str:
     """Получить название таблицы из раздела insert или merge"""
-    line = line.split(' into ')[1] if line.find('(') == -1 else line.split(' into ')[1].split('(')[0]
+    try:
+        line = line.split(' into ')[1] if line.find('(') == -1 else line.split(' into ')[1].split('(')[0]
+    except IndexError as e:
+        print("Проблема с разделителем строки из раздела insert или merge. Он не найден или список пуст.")
+    except Exception as e:
+        print("Какая-то ошибка с delimetr из раздела insert или merge")
 
     return get_current_table(line)
 
@@ -47,7 +63,7 @@ def get_hashmap_dependent_tables(code_package_bodies) -> dict:
 
 
 def get_list_depedent(hash_tables: dict) -> list:
-    """Получение  словарей с данными для дальнейшей загрузки в csv"""
+    """Получение словарей с данными для дальнейшей загрузки в csv"""
     list_depedent_for_csv = list()
 
     for main_table, value in hash_tables.items():
