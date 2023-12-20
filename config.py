@@ -1,4 +1,4 @@
-code_package_bodies = 'package_body.txt'
+file_code_package_bodies = 'package_body.txt'
 main_schema = 'APL_APP_PLEDGE'
 all_table_name = {"sm_ism_answer_speed",
                   "apl_realizator_doli",

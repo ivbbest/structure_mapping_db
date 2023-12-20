@@ -1,9 +1,7 @@
-from config import all_table_name, code_package_bodies, main_schema
+from config import all_table_name, file_code_package_bodies, main_schema
 import re
 from collections import defaultdict
-from pprint import pprint
 import csv
-import traceback
 
 
 def get_current_table(line: str) -> str:
@@ -14,23 +12,10 @@ def get_current_table(line: str) -> str:
         return line.strip('()')
 
 
-def get_tables_from_key_from(line: str) -> str:
-    """Получить все таблицы из раздела from"""
-    line = line.lower().split('from')[1].strip(' \n')
-
-    if line.find(' where ') != -1:
-        line = line.split(' where ')[0]
-
-    return get_current_table(line)
-
-
-def get_tables_from_key_join(line: str) -> str:
-    """Получить все таблицы из раздела join"""
-    try:
-        line = line.split('join')[1].split(' on ')[0]
-    except Exception as e:
-        print(traceback.format_exc())
-        print(str(e))
+def get_table_from_section_from_or_join(line: str) -> str:
+    """Получить таблицу из раздела from или join"""
+    line = re.split(r'from|join', line)[1]
+    line = re.split(r'\swhere\s|\son\s', line)[0].strip()
 
     return get_current_table(line)
 
@@ -54,12 +39,9 @@ def get_hashmap_dependent_tables(code_package_bodies) -> dict:
                 continue
             elif re.search(r"merge into|insert into", line):
                 table = get_name_tables(line)
-            elif re.search(r'from', line) and not re.search(r'extract|coalesce|vw_', line):
-                hash_tables[table].add(get_tables_from_key_from(line))
-            elif re.search(r'join', line):
-                hash_tables[table].add(get_tables_from_key_join(line))
-
-    # pprint(hash_tables)
+            elif (re.search(r'from', line) and not re.search(r'extract|coalesce|vw_', line)) or re.search(r'join',
+                                                                                                          line):
+                hash_tables[table].add(get_table_from_section_from_or_join(line))
 
     return hash_tables
 
@@ -90,7 +72,6 @@ def get_list_depedent(hash_tables: dict) -> list:
                 }
             )
 
-    # pprint(list_depedent_for_csv)
     return list_depedent_for_csv
 
 
@@ -104,9 +85,10 @@ def create_csv_file(name_file: str, list_depedents_for_csv: list) -> None:
 
 
 def main():
-    hash_tables = get_hashmap_dependent_tables(code_package_bodies)
+    """Точка входа"""
+    hash_tables = get_hashmap_dependent_tables(file_code_package_bodies)
     list_depedent_for_csv = get_list_depedent(hash_tables)
-    create_csv_file('results2', list_depedent_for_csv)
+    create_csv_file('results', list_depedent_for_csv)
 
 
 if __name__ == "__main__":
