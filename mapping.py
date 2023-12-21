@@ -4,41 +4,45 @@ from collections import defaultdict
 import csv
 
 
+def catch_all_exceptions(msg):
+    """Добавлена единая точка входа для обработок ошибок"""
+    def real_decorator(func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except IndexError as e:
+                print(f"Проблема с разделителем строки из раздела {msg}. Он не найден или список пуст.")
+            except Exception as e:
+                print(f"Какая-то ошибка с delimetr из раздела {msg}")
+
+        return wrapper
+
+    return real_decorator
+
+
 # TODO: создать custom exception class и использовать для обработки ошибок, чтобы было DRY
+@catch_all_exceptions('алиасов у таблицы')
 def get_current_table(line: str) -> str:
     """Проверка наличия алиаса рядом с таблицей и возврат только самой таблицы"""
-    try:
-        line = line if line.find(' ') == -1 else line.split()[0]
+    line = line if line.find(' ') == -1 else line.split()[0]
 
-        if line in all_table_name or (line.find('.') != -1 and line.find('_') != -1):
-            return line.strip('()')
-    except IndexError as e:
-        print("Проблема с разделителем строки из раздела from или join. Он не найден или список пуст.")
-    except Exception as e:
-        print("Какая-то ошибка с delimetr из раздела from или join")
+    if line in all_table_name or (line.find('.') != -1 and line.find('_') != -1):
+        return line.strip('()')
 
 
+@catch_all_exceptions('from или join')
 def get_table_from_section_from_or_join(line: str) -> str:
     """Получить таблицу из раздела from или join"""
-    try:
-        line = re.split(r'from|join', line)[1]
-        line = re.split(r'\swhere\s|\son\s', line)[0].strip()
-    except IndexError as e:
-        print("Проблема с разделителем строки из раздела from или join. Он не найден или список пуст.")
-    except Exception as e:
-        print("Какая-то ошибка с delimetr из раздела from или join")
+    line = re.split(r'from|join', line)[1]
+    line = re.split(r'\swhere\s|\son\s', line)[0].strip()
 
     return get_current_table(line)
 
 
+@catch_all_exceptions('insert или merge')
 def get_name_tables(line: str) -> str:
     """Получить название таблицы из раздела insert или merge"""
-    try:
-        line = line.split(' into ')[1] if line.find('(') == -1 else line.split(' into ')[1].split('(')[0]
-    except IndexError as e:
-        print("Проблема с разделителем строки из раздела insert или merge. Он не найден или список пуст.")
-    except Exception as e:
-        print("Какая-то ошибка с delimetr из раздела insert или merge")
+    line = line.split(' into ')[1] if line.find('(') == -1 else line.split(' into ')[1].split('(')[0]
 
     return get_current_table(line)
 
@@ -104,7 +108,7 @@ def main():
     """Точка входа"""
     hash_tables = get_hashmap_dependent_tables(file_code_package_bodies)
     list_depedent_for_csv = get_list_depedent(hash_tables)
-    create_csv_file('results', list_depedent_for_csv)
+    create_csv_file('result1s', list_depedent_for_csv)
 
 
 if __name__ == "__main__":
