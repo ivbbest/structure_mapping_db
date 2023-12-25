@@ -51,7 +51,7 @@ def get_hashmap_dependent_tables(code_package_bodies) -> NamedTuple:
     with open(code_package_bodies, 'r', encoding='UTF-8') as f:
         for number_line, line in enumerate(f):
             line = line.lower().strip(' \n ')
-            if line.startswith('--'):
+            if re.search(r'^--', line):
                 continue
             elif re.search(pattern_package, line):
                 package_name = line.split(' body ')[1].split(' is')[0]
