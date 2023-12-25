@@ -51,6 +51,14 @@ def get_hashmap_dependent_tables(code_package_bodies) -> NamedTuple:
     with open(code_package_bodies, 'r', encoding='UTF-8') as f:
         for number_line, line in enumerate(f):
             line = line.lower().strip(' \n ')
+
+            dict_pattern_to_func = {
+                pattern_merge_insert: get_name_tables,
+                pattern_from: get_table_from_section_from_or_join,
+            }
+
+            dict_pattern_to_func.get(re.search(pattern_end|pattern_procedure, line).group(0))(line)
+
             if re.search(r'^--', line):
                 continue
             elif re.search(pattern_package, line):
@@ -58,7 +66,7 @@ def get_hashmap_dependent_tables(code_package_bodies) -> NamedTuple:
             elif re.search(pattern_merge_insert, line):
                 table_name = get_name_tables(line)
             elif (re.search(pattern_from, line) and not re.search(pattern_exclude, line)) or re.search(pattern_join,
-                                                                                                          line):
+                                                                                                       line):
                 tables[table_name].add(get_table_from_section_from_or_join(line))
             elif re.search(pattern_procedure, line):
                 procedure_name = line.split('procedure')[1].strip().split(' is')[0]
