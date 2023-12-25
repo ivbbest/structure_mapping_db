@@ -4,6 +4,15 @@ from collections import defaultdict, namedtuple
 import csv
 from typing import NamedTuple
 from exceptions import catch_all_exceptions
+from pattern_re import (
+    pattern_from,
+    pattern_merge_insert,
+    pattern_join,
+    pattern_procedure,
+    pattern_exclude,
+    pattern_end,
+    pattern_package
+)
 
 
 @catch_all_exceptions('алиасов у таблицы')
@@ -44,17 +53,17 @@ def get_hashmap_dependent_tables(code_package_bodies) -> NamedTuple:
             line = line.lower().strip(' \n ')
             if line.startswith('--'):
                 continue
-            elif re.search(r"package body", line):
+            elif re.search(pattern_package, line):
                 package_name = line.split(' body ')[1].split(' is')[0]
-            elif re.search(r"merge into|insert into", line):
+            elif re.search(pattern_merge_insert, line):
                 table_name = get_name_tables(line)
-            elif (re.search(r'from', line) and not re.search(r'extract|coalesce|vw_', line)) or re.search(r'join',
+            elif (re.search(pattern_from, line) and not re.search(pattern_exclude, line)) or re.search(pattern_join,
                                                                                                           line):
                 tables[table_name].add(get_table_from_section_from_or_join(line))
-            elif re.search(r"procedure", line):
+            elif re.search(pattern_procedure, line):
                 procedure_name = line.split('procedure')[1].strip().split(' is')[0]
                 start_line = number_line
-            elif re.search(r"end;", line):
+            elif re.search(pattern_end, line):
                 end_line = number_line
                 packages_and_procedures[package_name].update({procedure_name: end_line - start_line + 2})
 
