@@ -1,11 +1,12 @@
 from config import all_table_name, file_code_package_bodies, main_schema
 import re
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import csv
+from pprint import pprint
+from typing import NamedTuple
 
 
 def catch_all_exceptions(msg):
-    """Добавлена единая точка входа для обработок ошибок"""
     def real_decorator(func):
         def wrapper(*args, **kwargs):
             try:
@@ -48,27 +49,37 @@ def get_name_tables(line: str) -> str:
 
 
 # TODO: считывание данных не из одного файла, а из папки, где много сразу файлов
-def get_hashmap_dependent_tables(code_package_bodies) -> dict:
+def get_hashmap_dependent_tables(code_package_bodies) -> NamedTuple:
     """Получение хэш-таблицы с зависимостями таблиц из всех пакетов"""
-    hash_tables = defaultdict(set)
+    tables = defaultdict(set)
+    packages_and_procedures = defaultdict(dict)
+    hash_data = namedtuple('hash_data', 'tables packages_and_procedures')
 
     with open(code_package_bodies, 'r', encoding='UTF-8') as f:
-        for line in f:
+        for number_line, line in enumerate(f):
             line = line.lower().strip(' \n ')
             if line.startswith('--'):
                 continue
+            elif re.search(r"package body", line):
+                package_name = line.split(' body ')[1].split(' is')[0]
             elif re.search(r"merge into|insert into", line):
-                table = get_name_tables(line)
+                table_name = get_name_tables(line)
             elif (re.search(r'from', line) and not re.search(r'extract|coalesce|vw_', line)) or re.search(r'join',
                                                                                                           line):
-                hash_tables[table].add(get_table_from_section_from_or_join(line))
+                tables[table_name].add(get_table_from_section_from_or_join(line))
+            elif re.search(r"procedure", line):
+                procedure_name = line.split('procedure')[1].strip().split(' is')[0]
+                start_line = number_line
+            elif re.search(r"end;", line):
+                end_line = number_line
+                packages_and_procedures[package_name].update({procedure_name: end_line - start_line + 2})
 
-    return hash_tables
+    return hash_data(tables=tables, packages_and_procedures=packages_and_procedures)
 
 
-def get_list_depedent(hash_tables: dict) -> list:
-    """Получение словарей с данными для дальнейшей загрузки в csv"""
-    list_depedent_for_csv = list()
+def get_list_tables_depedent(hash_tables: dict) -> list:
+    """Получение словарей с зависимостями таблиц для дальнейшей загрузки в csv"""
+    list_tables_depedent = list()
 
     for main_table, value in hash_tables.items():
         for val in value:
@@ -81,7 +92,7 @@ def get_list_depedent(hash_tables: dict) -> list:
                 dependent_table = val
                 dependent_schema = main_schema
 
-            list_depedent_for_csv.append(
+            list_tables_depedent.append(
                 {
                     'схема АПЛ': main_schema,
                     'наименование таблицы': main_table,
@@ -92,7 +103,27 @@ def get_list_depedent(hash_tables: dict) -> list:
                 }
             )
 
-    return list_depedent_for_csv
+    return list_tables_depedent
+
+
+def get_packages_and_procedures_count_row(hash_packages_and_procedures: dict) -> list:
+    """Получение словарей с пакетами и количеством строк в каждой процедуре для дальнейшей загрузки в csv"""
+    list_packages_and_procedure = list()
+
+    for package, procedures in hash_packages_and_procedures.items():
+        for procedure, row_procedure in procedures.items():
+            list_packages_and_procedure.append(
+                {
+                    'схема АПЛ': main_schema,
+                    'наименование пакета': package,
+                    'наименование процедуры': procedure,
+                    'объем кода': row_procedure,
+                    'критичность переноса на КАП': '',
+                    'цель': ''
+                }
+            )
+
+    return list_packages_and_procedure
 
 
 def create_csv_file(name_file: str, list_depedents_for_csv: list) -> None:
@@ -106,9 +137,11 @@ def create_csv_file(name_file: str, list_depedents_for_csv: list) -> None:
 
 def main():
     """Точка входа"""
-    hash_tables = get_hashmap_dependent_tables(file_code_package_bodies)
-    list_depedent_for_csv = get_list_depedent(hash_tables)
-    create_csv_file('result1s', list_depedent_for_csv)
+    hash_input_data = get_hashmap_dependent_tables(file_code_package_bodies)
+    list_tables_depedent = get_list_tables_depedent(hash_input_data.tables)
+    list_packages_and_procedures = get_packages_and_procedures_count_row(hash_input_data.packages_and_procedures)
+    create_csv_file('tables_depedent', list_tables_depedent)
+    create_csv_file('packages_procedure', list_packages_and_procedures)
 
 
 if __name__ == "__main__":
