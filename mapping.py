@@ -2,12 +2,12 @@ from config import all_table_name, file_code_package_bodies, main_schema
 import re
 from collections import defaultdict, namedtuple
 import csv
-from pprint import pprint
-from typing import NamedTuple
+from typing import NamedTuple, Callable
 
 
-def catch_all_exceptions(msg):
-    def real_decorator(func):
+
+def catch_all_exceptions(msg: str):
+    def real_decorator(func: Callable):
         def wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
@@ -126,20 +126,20 @@ def get_packages_and_procedures_count_row(hash_packages_and_procedures: dict) ->
     return list_packages_and_procedure
 
 
-def create_csv_file(name_file: str, list_depedents_for_csv: list) -> None:
-    """Создание csv файла"""
+def create_csv_file(name_file: str, list_input_data: list) -> None:
+    """Создание csv файла на основе списка данных"""
     with open(f"{name_file}.csv", mode="w", encoding='utf-8-sig') as w_file:
         file_writer = csv.DictWriter(w_file, lineterminator="\r",
-                                     fieldnames=list_depedents_for_csv[0].keys(), delimiter=';')
+                                     fieldnames=list_input_data[0].keys(), delimiter=';')
         file_writer.writeheader()
-        file_writer.writerows(list_depedents_for_csv)
+        file_writer.writerows(list_input_data)
 
 
-def main():
+def main() -> None:
     """Точка входа"""
-    hash_input_data = get_hashmap_dependent_tables(file_code_package_bodies)
-    list_tables_depedent = get_list_tables_depedent(hash_input_data.tables)
-    list_packages_and_procedures = get_packages_and_procedures_count_row(hash_input_data.packages_and_procedures)
+    hash_tables, hash_packages = get_hashmap_dependent_tables(file_code_package_bodies)
+    list_tables_depedent = get_list_tables_depedent(hash_tables)
+    list_packages_and_procedures = get_packages_and_procedures_count_row(hash_packages)
     create_csv_file('tables_depedent', list_tables_depedent)
     create_csv_file('packages_procedure', list_packages_and_procedures)
 
