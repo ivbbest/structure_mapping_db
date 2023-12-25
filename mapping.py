@@ -2,26 +2,10 @@ from config import all_table_name, file_code_package_bodies, main_schema
 import re
 from collections import defaultdict, namedtuple
 import csv
-from typing import NamedTuple, Callable
+from typing import NamedTuple
+from exceptions import catch_all_exceptions
 
 
-
-def catch_all_exceptions(msg: str):
-    def real_decorator(func: Callable):
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except IndexError as e:
-                print(f"Проблема с разделителем строки из раздела {msg}. Он не найден или список пуст.")
-            except Exception as e:
-                print(f"Какая-то ошибка с delimetr из раздела {msg}")
-
-        return wrapper
-
-    return real_decorator
-
-
-# TODO: создать custom exception class и использовать для обработки ошибок, чтобы было DRY
 @catch_all_exceptions('алиасов у таблицы')
 def get_current_table(line: str) -> str:
     """Проверка наличия алиаса рядом с таблицей и возврат только самой таблицы"""
